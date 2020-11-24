@@ -1,0 +1,85 @@
+---
+title: "Impact of Natural Events (Economic and Health)"
+author: "Kaley Hogarth"
+date: "11/23/2020"
+output: html_document
+---
+
+## Synopsis
+
+The following analysis will focus on two questions : 1. What natural event causes the largest harm in terms of human health and 1. What weather events causes the largest economic consequences. To measure the effects on human health, total fatalities and injuries were summed. For economic impact, financial damages to property and crops were summed. Heat waves were the major contributors of human health costs, while hurricanes accounted for the largest economic impacts. 
+
+## Data Processing
+
+### Load Required Packages
+```{r Loading Packages, include=FALSE}
+Libs<-c("BAS", "broom", "car", "dplyr", "expss", "GGally", "ggExtra", "ggplot2", "ggpubr", "ggrepel","ggsignif", "Hmisc", "hrbrthemes", "knitr", "lattice","matrixStats", "Metrics", "nlme", "purrr", "readr", "rmarkdown", "rstatix", "statsr", "stringr", "tibble", "tidyr", "timeDate","viridis")
+
+lapply(Libs, library, character.only=TRUE)
+```
+
+### Load in Data 
+```{r, cache=TRUE}
+data<-read.csv("repdata_data_StormData.csv.bz2")
+```
+
+
+
+### Process Dataset
+-To reduce the size of the dataset, selected only the variables that will be needed in the analysis. 
+-To measure the impact of weather events and "population health", created a new variable named "POP_Health" which is the sum of the "Fatalities" and "Injuries" for each event. 
+-To measure the impact of weather events and "economic consequences", created a new variable named "ECON_Impact" which is the sum of the "Poperty Damages" and "Crop Damages" for each event. 
+
+```{r Processing Data}
+pro.data<-data %>% select(STATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+
+pro.data<-pro.data %>% mutate(POP_Health= (FATALITIES+INJURIES))
+pro.data<- pro.data %>% mutate(PROP_Impact=case_when(PROPDMGEXP== "K"~ PROPDMG, PROPDMGEXP== "M"~ PROPDMG*1000, PROPDMGEXP== "B"~PROPDMG*1000000, PROPDMGEXP== " "~ PROPDMG))
+pro.data<- pro.data %>% mutate(CROP_Impact=case_when(CROPDMGEXP== "K"~ CROPDMG, CROPDMGEXP== "M"~ CROPDMG*1000, CROPDMGEXP== "B"~CROPDMG*1000000,CROPDMGEXP== " "~ CROPDMG))
+final.data <- pro.data %>% mutate(ECON_Impact=(CROP_Impact+PROP_Impact))
+
+```
+
+## Results
+
+### Most Harmful Natural Events in Respect to Human Health
+-While there are many natural events which had collected data in the dataset, only those with the top 10 impacts on population health were plotted.
+
+```{r, echo=TRUE}
+health.data<-final.data %>% group_by(EVTYPE) %>% summarise(POP_Health=mean(POP_Health, na.rm=TRUE))
+
+health.data.order<-health.data %>% arrange(desc(POP_Health))
+health.data.order<-health.data.order%>% mutate(Order=1:nrow(health.data.order))
+health.data.graph<-health.data.order %>% filter(Order==1:10)
+
+
+ggplot(data=health.data.graph, aes(x=EVTYPE, y=POP_Health, colour=EVTYPE, fill=EVTYPE))+geom_col()+theme(axis.text.x = element_blank(), legend.title= element_blank(), axis.title = element_text(face="bold"))+labs(title="Top 10 Natural Events by Human Health Impact", y="Fatalities and Injuries (x1000)")                                   
+```
+
+
+### Most Harmful Natural Events in Respect to Economic Impact
+-While there are many natural events which had collected data in the dataset, only those with the top 10 impacts on population health were plotted.
+```{r, echo=TRUE}
+econ.data<-final.data %>% group_by(EVTYPE) %>% summarise(ECON_Impact=mean(ECON_Impact, na.rm=TRUE))
+
+econ.data.order<-econ.data %>% arrange(desc(ECON_Impact))
+econ.data.order<-econ.data.order%>% mutate(Order=1:nrow(econ.data.order))
+econ.data.graph<-econ.data.order %>% filter(Order==1:10)
+
+
+ggplot(data=econ.data.graph, aes(x=EVTYPE, y=ECON_Impact, colour=EVTYPE, fill=EVTYPE, colour=EVTYPE))+geom_col()+theme(axis.text.x = element_blank(),legend.title= element_blank(), axis.title = element_text(face="bold"))+labs(title="Top 10 Natural Events by Economic Impact", y="Property and Crop Damages (x1000$)")
+                                                                               
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
